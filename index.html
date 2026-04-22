@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VSL Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --surface2: #1a1a1a;
+  --border: #2a2a2a;
+  --accent: #e63946;
+  --text: #f0f0f0;
+  --muted: #888;
+  --success: #2ecc71;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+.header {
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 100;
+}
+.logo {
+  font-family: 'Space Mono', monospace;
+  font-size: 14px;
+  letter-spacing: .08em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+@media(max-width:768px){.container{grid-template-columns:1fr}}
+
+.steps {
+  grid-column: 1 / -1;
+  display: flex;
+  margin-bottom: 1.5rem;
+}
+.step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: .875rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.step:first-child { border-radius: 8px 0 0 8px; }
+.step:last-child { border-radius: 0 8px 8px 0; }
+.step + .step { border-left: none; }
+.step.active { background: rgba(230,57,70,.06); border-color: rgba(230,57,70,.3); }
+.step.done { background: rgba(46,204,113,.04); border-color: rgba(46,204,113,.2); }
+.step-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-family: 'Space Mono', monospace;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.step.active .step-num { border-color: var(--accent); color: var(--accent); background: rgba(230,57,70,.1); }
+.step.done .step-num { border-color: var(--success); color: var(--success); background: rgba(46,204,113,.1); }
+.step-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+.step.active .step-label { color: var(--text); }
+.step.done .step-label { color: var(--success); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+.card-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-icon {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+}
+.card-title { font-size: 13px; font-weight: 600; letter-spacing: .03em; }
+.card-body { padding: 1.25rem; }
+
+/* UPLOAD BTN */
+.upload-btn {
+  width: 100%;
+  padding: 2.5rem 1rem;
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .75rem;
+  font-family: 'DM Sans', sans-serif;
+}
+.upload-btn:hover { border-color: var(--accent); background: rgba(230,57,70,.04); }
+.upload-btn-icon { font-size: 32px; }
+.upload-btn-label { font-size: 14px; color: var(--muted); }
+.upload-btn-label strong { color: var(--text); display: block; margin-bottom: 4px; }
+
+/* STATUS */
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-family: 'Space Mono', monospace;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(136,136,136,.1);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.status-tag.ok { background: rgba(46,204,113,.1); color: var(--success); border-color: rgba(46,204,113,.2); }
+
+/* VIDEO META */
+.video-result { display: none; margin-top: 1rem; }
+.video-thumb { border-radius: 8px; overflow: hidden; background: #000; aspect-ratio: 16/9; }
+.video-thumb video { width: 100%; height: 100%; object-fit: contain; }
+.video-meta { margin-top: .75rem; padding: .75rem; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border); }
+.video-meta-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.video-meta-row:last-child { margin-bottom: 0; }
+.video-meta-val { font-family: 'Space Mono', monospace; color: var(--text); font-size: 11px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* FIELDS */
+.field { margin-bottom: 1rem; }
+.field:last-child { margin-bottom: 0; }
+label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .04em; margin-bottom: 6px; text-transform: uppercase; }
+input[type=text], input[type=number], textarea, select {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color .2s;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 64px; line-height: 1.5; }
+select option { background: var(--surface2); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+.color-field {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 10px;
+}
+.color-field input[type=color] { width: 28px; height: 28px; border: none; background: none; cursor: pointer; padding: 0; border-radius: 4px; }
+.color-field span { font-size: 13px; font-family: 'Space Mono', monospace; color: var(--text); flex: 1; }
+
+.cta-block { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: .75rem; }
+.cta-block-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .875rem; }
+.cta-num { font-size: 11px; font-family: 'Space Mono', monospace; color: var(--accent); background: rgba(230,57,70,.1); border: 1px solid rgba(230,57,70,.2); padding: 2px 8px; border-radius: 4px; }
+.cta-remove { background: none; border: 1px solid var(--border); color: var(--muted); cursor: pointer; padding: 3px 8px; border-radius: 5px; font-size: 12px; transition: all .15s; }
+.cta-remove:hover { border-color: var(--accent); color: var(--accent); }
+
+.btn { display: block; width: 100%; padding: 12px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; text-align: center; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #c62d38; }
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+.btn-ghost { background: none; color: var(--muted); border: 1px dashed var(--border); font-size: 13px; padding: 9px; }
+.btn-ghost:hover { border-color: var(--muted); color: var(--text); }
+
+.output-section { display: none; }
+.output-section.visible { display: block; }
+.output-tabs { display: flex; gap: 4px; margin-bottom: 1rem; }
+.tab { padding: 7px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--muted); font-family: 'DM Sans', sans-serif; transition: all .15s; }
+.tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.output-box { background: #050505; border: 1px solid var(--border); border-radius: 10px; padding: 1rem; font-size: 11px; font-family: 'Space Mono', monospace; color: #a8d8a8; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; line-height: 1.7; display: none; }
+.output-box.active { display: block; }
+.copy-btn { margin-top: .75rem; padding: 10px; background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; width: 100%; transition: all .15s; }
+.copy-btn:hover { border-color: var(--success); color: var(--success); }
+
+.notif { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .875rem 1.25rem; font-size: 13px; display: none; z-index: 999; }
+.notif.success { border-color: rgba(46,204,113,.3); color: var(--success); }
+.notif.error { border-color: rgba(230,57,70,.3); color: #ff6b6b; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    VSL STUDIO
+  </div>
+  <div id="statusTag" class="status-tag">● aguardando upload</div>
+</div>
+
+<div class="container">
+
+  <div class="steps">
+    <div class="step active" id="step1"><div class="step-num">1</div><div class="step-label">Upload do vídeo</div></div>
+    <div class="step" id="step2"><div class="step-num">2</div><div class="step-label">Configurar player</div></div>
+    <div class="step" id="step3"><div class="step-num">3</div><div class="step-label">Gerar embed</div></div>
+  </div>
+
+  <!-- ESQUERDA -->
+  <div>
+    <!-- UPLOAD -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">📤</div>
+        <div class="card-title">Upload do vídeo</div>
+      </div>
+      <div class="card-body">
+        <div style="position:relative">
+          <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('videoFileInput').click()">
+            <div class="upload-btn-icon">🎬</div>
+            <div class="upload-btn-label">
+              <strong>Clique para selecionar seu vídeo</strong>
+              Qualquer tamanho · Bunny.net CDN
+            </div>
+          </button>
+          <input type="file" id="videoFileInput" accept="video/mp4,video/*" style="display:none" onchange="uploadToBunny(this.files[0])">
+        </div>
+        <div class="progress-wrap" id="progressWrap" style="display:none;margin-top:1rem">
+          <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:.5rem">
+            <div id="progressFill" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width .3s"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-family:'Space Mono',monospace;color:var(--muted)">
+            <span id="progressLabel">Enviando...</span>
+            <span id="progressPct">0%</span>
+          </div>
+        </div>
+        <div class="video-result" id="videoResult">
+          <div class="video-thumb">
+            <video id="previewVid" controls></video>
+          </div>
+          <div class="video-meta">
+            <div class="video-meta-row"><span>Nome</span><span class="video-meta-val" id="metaName">—</span></div>
+            <div class="video-meta-row"><span>URL</span><span class="video-meta-val" id="metaUrl">—</span></div>
+            <div class="video-meta-row"><span>Formato</span><span class="video-meta-val" id="metaFormat">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOOK IMAGEM -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">🖼</div>
+        <div class="card-title">Hook — imagem (container 1)</div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <button class="upload-btn" onclick="openImgWidget()" id="imgUploadBtn">
+            <div class="upload-btn-icon">🖼</div>
+            <div class="upload-btn-label">
+              <strong>Clique para selecionar a imagem do hook</strong>
+              JPG, PNG, WebP · Cloudinary CDN
+            </div>
+          </button>
+          <div id="hookImgPreview" style="display:none;margin-top:.75rem">
+            <img id="hookImgThumb" style="width:100%;border-radius:8px;object-fit:cover;max-height:120px">
+            <div style="font-size:11px;font-family:'Space Mono',monospace;color:var(--muted);margin-top:4px" id="hookImgMeta">—</div>
+          </div>
+          <input type="hidden" id="hookImgUrl">
+        </div>
+        <div class="field">
+          <label>Altura do container hook (% do total 9:16)</label>
+          <select id="hookHeightPct">
+            <option value="28">28% — hook pequeno</option>
+            <option value="32" selected>32% — hook médio</option>
+            <option value="38">38% — hook grande</option>
+          </select>
+        </div>
+        <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:4px">
+          O restante vai para o vídeo + CTA automaticamente
+        </div>
+      </div>
+    </div>
+
+    <!-- HOOK TEXTO (opcional) -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">🪝</div>
+        <div class="card-title">Hook — texto sobreposto (opcional)</div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>Texto (deixe vazio para não usar)</label>
+          <textarea id="hookText" placeholder="Ex: Assista até o final e descubra o segredo..."></textarea>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Cor do texto</label>
+            <div class="color-field">
+              <input type="color" id="hookTextColor" value="#FFFFFF" oninput="syncColor(this,'hookTextHex')">
+              <span id="hookTextHex">#FFFFFF</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Cor do fundo</label>
+            <div class="color-field">
+              <input type="color" id="hookBgColor" value="#CC0000" oninput="syncColor(this,'hookBgHex')">
+              <span id="hookBgHex">#CC0000</span>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Tamanho da fonte (px)</label>
+          <input type="number" id="hookFontSize" value="15" min="10" max="30">
+        </div>
+      </div>
+    </div>
+
+    <!-- PLAYER -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">⚙️</div>
+        <div class="card-title">Configuração do player</div>
+      </div>
+      <div class="card-body">
+        <div class="row2">
+          <div class="field">
+            <label>Autoplay</label>
+            <select id="autoplay">
+              <option value="1">Sim (mudo)</option>
+              <option value="0">Não</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Controles nativos</label>
+            <select id="controls">
+              <option value="0">Esconder</option>
+              <option value="1">Mostrar</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Largura máx (px)</label>
+            <input type="number" id="maxWidth" value="400">
+          </div>
+          <div class="field">
+            <label>Borda arredondada (px)</label>
+            <input type="number" id="borderRadius" value="8">
+          </div>
+        </div>
+        <div class="field">
+          <label>Cor de fundo do player</label>
+          <div class="color-field">
+            <input type="color" id="playerBg" value="#000000" oninput="syncColor(this,'playerBgHex')">
+            <span id="playerBgHex">#000000</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Pausar ao clicar no CTA</label>
+          <select id="pauseOnCta">
+            <option value="1">Sim</option>
+            <option value="0">Não</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTAs -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">📢</div>
+        <div class="card-title">Botões CTA temporizados</div>
+      </div>
+      <div class="card-body">
+        <div id="ctaList"></div>
+        <button class="btn btn-ghost" onclick="addCTA()">+ Adicionar CTA</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIREITA -->
+  <div>
+    <!-- GERAR -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">⚡</div>
+        <div class="card-title">Gerar embed</div>
+      </div>
+      <div class="card-body">
+        <button class="btn btn-primary" id="generateBtn" onclick="generate()" disabled>Gerar código embed</button>
+        <div id="generateHint" style="margin-top:.75rem;font-size:12px;color:var(--muted);text-align:center">
+          Faça o upload do vídeo primeiro para habilitar
+        </div>
+      </div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div class="card output-section" id="outputSection">
+      <div class="card-header">
+        <div class="card-icon">📋</div>
+        <div class="card-title">Código — cole no Lovable</div>
+      </div>
+      <div class="card-body">
+        <div class="output-tabs">
+          <button class="tab active" onclick="switchTab('html', this)">HTML</button>
+          <button class="tab" onclick="switchTab('react', this)">React</button>
+        </div>
+        <div class="output-box active" id="outHtml"></div>
+        <div class="output-box" id="outReact"></div>
+        <button class="copy-btn" onclick="copyActive()">📋 Copiar código</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+const CLOUD_NAME = 'dikyhqbtl';
+const UPLOAD_PRESET = 'vsl_videos';
+const BUNNY_LIBRARY_ID = '642514';
+const BUNNY_API_KEY = 'f6ce9483-0226-413f-8473-cf9dd9ab-7ef9-48da';
+const BUNNY_CDN_HOST = 'vz-d4d0be9f-664.b-cdn.net';
+
+let uploadedUrl = '';
+let ctaCount = 0;
+let activeTab = 'html';
+let widget;
+
+async function uploadToBunny(file) {
+  if (!file) return;
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('videoResult').style.display = 'none';
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('progressPct').textContent = '0%';
+  document.getElementById('progressLabel').textContent = 'Iniciando upload TUS...';
+
+  try {
+    const expirationTime = Math.floor(Date.now() / 1000) + 7200;
+
+    // 1. Criar upload TUS direto no Bunny (suporta CORS nativamente)
+    const tusRes = await fetch('https://video.bunnycdn.com/tusupload', {
+      method: 'POST',
+      headers: {
+        'AuthorizationSignature': BUNNY_API_KEY,
+        'AuthorizationExpire': String(expirationTime),
+        'VideoLibraryId': String(BUNNY_LIBRARY_ID),
+        'Tus-Resumable': '1.0.0',
+        'Upload-Length': String(file.size),
+        'Upload-Metadata': `filetype ${btoa(file.type)},title ${btoa(encodeURIComponent(file.name))}`
+      }
+    });
+
+    if (!tusRes.ok) throw new Error('Erro TUS POST: ' + tusRes.status);
+    const location = tusRes.headers.get('Location');
+    if (!location) throw new Error('Location header não retornado');
+
+    const videoId = location.split('/').pop();
+    document.getElementById('progressLabel').textContent = 'Enviando para Bunny CDN...';
+
+    // 2. Enviar arquivo em chunks PATCH
+    const chunkSize = 5 * 1024 * 1024;
+    let offset = 0;
+    while (offset < file.size) {
+      const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
+      const patchRes = await fetch(location, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/offset+octet-stream',
+          'Upload-Offset': String(offset),
+          'Tus-Resumable': '1.0.0'
+        },
+        body: chunk
+      });
+      if (!patchRes.ok) throw new Error('Erro PATCH: ' + patchRes.status);
+      offset += chunk.size;
+      const pct = Math.min(Math.round((offset / file.size) * 100), 100);
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('progressPct').textContent = pct + '%';
+      document.getElementById('progressLabel').textContent = 'Enviando ' + pct + '%...';
+    }
+
+    uploadedUrl = `https://${BUNNY_CDN_HOST}/${videoId}/playlist.m3u8`;
+    document.getElementById('previewVid').src = `https://${BUNNY_CDN_HOST}/${videoId}/play_720p.mp4`;
+    document.getElementById('metaName').textContent = file.name;
+    document.getElementById('metaUrl').textContent = uploadedUrl;
+    document.getElementById('metaFormat').textContent = 'HLS · ' + (file.size / 1024 / 1024).toFixed(1) + ' MB · Bunny CDN';
+    document.getElementById('videoResult').style.display = 'block';
+    document.getElementById('progressWrap').style.display = 'none';
+    document.getElementById('generateBtn').disabled = false;
+    document.getElementById('generateHint').style.display = 'none';
+    const st = document.getElementById('statusTag');
+    st.className = 'status-tag ok';
+    st.textContent = '● vídeo hospedado';
+    setStep(2);
+    showNotif('✅ Upload concluído! Bunny CDN ativo.', 'success');
+
+  } catch(err) {
+    document.getElementById('progressWrap').style.display = 'none';
+    showNotif('❌ ' + err.message, 'error');
+  }
+}
+
+function openWidget() {} // mantido para compatibilidade
+
+function openImgWidget() {
+  if (typeof cloudinary === 'undefined') {
+    showNotif('❌ Widget ainda carregando, tente novamente.', 'error');
+    return;
+  }
+  if (!imgWidget) {
+    imgWidget = cloudinary.createUploadWidget({
+      cloudName: CLOUD_NAME,
+      uploadPreset: UPLOAD_PRESET,
+      resourceType: 'image',
+      sources: ['local'],
+      multiple: false,
+      clientAllowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
+      styles: {
+        palette: {
+          window: '#111111', windowBorder: '#2a2a2a', tabIcon: '#e63946',
+          menuIcons: '#888888', textDark: '#f0f0f0', textLight: '#f0f0f0',
+          link: '#e63946', action: '#e63946', inactiveTabIcon: '#888888',
+          error: '#ff6b6b', inProgress: '#e63946', complete: '#2ecc71', sourceBg: '#1a1a1a'
+        }
+      }
+    }, (error, result) => {
+      if (!error && result && result.event === 'success') {
+        const info = result.info;
+        document.getElementById('hookImgUrl').value = info.secure_url;
+        document.getElementById('hookImgThumb').src = info.secure_url;
+        document.getElementById('hookImgMeta').textContent = info.original_filename + ' · ' + (info.bytes / 1024).toFixed(0) + ' KB';
+        document.getElementById('hookImgPreview').style.display = 'block';
+        showNotif('✅ Imagem do hook carregada!', 'success');
+      }
+      if (error) showNotif('❌ Erro: ' + (error.message || 'Tente novamente'), 'error');
+    });
+  }
+  imgWidget.open();
+}
+
+function openWidget() {
+  if (typeof cloudinary === 'undefined') {
+    showNotif('❌ Widget ainda carregando, tente novamente.', 'error');
+    return;
+  }
+  if (!widget) {
+    widget = cloudinary.createUploadWidget({
+      cloudName: CLOUD_NAME,
+      uploadPreset: UPLOAD_PRESET,
+      resourceType: 'video',
+      sources: ['local'],
+      multiple: false,
+      maxFileSize: 2000000000,
+      clientAllowedFormats: ['mp4', 'mov', 'avi', 'mkv', 'webm'],
+      language: 'pt',
+      text: {
+        pt: {
+          or: 'ou',
+          back: 'Voltar',
+          advanced: 'Avançado',
+          close: 'Fechar',
+          no_results: 'Sem resultados',
+          search_placeholder: 'Pesquisar arquivos',
+          about_uw: 'Sobre o Upload Widget',
+          menu: { files: 'Meus Arquivos' },
+          selection_counter: { file: 'arquivo' },
+          actions: { upload: 'Enviar', next: 'Próximo', processing: 'Processando...' },
+          local: { browse: 'Selecionar vídeo', dd_title_single: 'Arraste seu vídeo aqui', dd_title_multi: 'Arraste seus vídeos aqui' }
+        }
+      },
+      styles: {
+        palette: {
+          window: '#111111',
+          windowBorder: '#2a2a2a',
+          tabIcon: '#e63946',
+          menuIcons: '#888888',
+          textDark: '#f0f0f0',
+          textLight: '#f0f0f0',
+          link: '#e63946',
+          action: '#e63946',
+          inactiveTabIcon: '#888888',
+          error: '#ff6b6b',
+          inProgress: '#e63946',
+          complete: '#2ecc71',
+          sourceBg: '#1a1a1a'
+        }
+      }
+    }, (error, result) => {
+      if (!error && result && result.event === 'success') {
+        const info = result.info;
+        uploadedUrl = info.secure_url;
+        document.getElementById('previewVid').src = uploadedUrl;
+        document.getElementById('metaName').textContent = info.original_filename + '.' + info.format;
+        document.getElementById('metaUrl').textContent = uploadedUrl;
+        document.getElementById('metaFormat').textContent = info.format.toUpperCase() + ' · ' + (info.bytes / 1024 / 1024).toFixed(1) + ' MB';
+        document.getElementById('videoResult').style.display = 'block';
+        document.getElementById('generateBtn').disabled = false;
+        document.getElementById('generateHint').style.display = 'none';
+        const st = document.getElementById('statusTag');
+        st.className = 'status-tag ok';
+        st.textContent = '● vídeo hospedado';
+        setStep(2);
+        showNotif('✅ Upload concluído!', 'success');
+      }
+      if (error) {
+        showNotif('❌ Erro: ' + (error.message || 'Tente novamente'), 'error');
+      }
+    });
+  }
+  widget.open();
+}
+
+function setStep(n) {
+  for (let i = 1; i <= 3; i++) {
+    const s = document.getElementById('step' + i);
+    s.className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+  }
+}
+
+function syncColor(input, spanId) {
+  document.getElementById(spanId).textContent = input.value.toUpperCase();
+}
+
+let ctaIds = [];
+function addCTA() {
+  ctaCount++;
+  const id = ctaCount;
+  ctaIds.push(id);
+  const div = document.createElement('div');
+  div.className = 'cta-block';
+  div.id = 'ctab-' + id;
+  div.innerHTML = `
+    <div class="cta-block-header">
+      <span class="cta-num">CTA ${id}</span>
+      <button class="cta-remove" onclick="removeCTA(${id})">remover</button>
+    </div>
+    <div class="field"><label>Texto do botão</label><input type="text" id="ct-${id}" placeholder="Ex: Clique aqui para continuar"></div>
+    <div class="field"><label>URL de destino</label><input type="text" id="cu-${id}" placeholder="https://..."></div>
+    <div class="row3">
+      <div class="field"><label>Aparecer em (seg)</label><input type="number" id="cs-${id}" value="720" placeholder="720"></div>
+      <div class="field"><label>Cor botão</label>
+        <div class="color-field"><input type="color" id="cbg-${id}" value="#CC0000" oninput="syncColor(this,'cbgH-${id}')"><span id="cbgH-${id}">#CC0000</span></div>
+      </div>
+      <div class="field"><label>Cor texto</label>
+        <div class="color-field"><input type="color" id="cfg-${id}" value="#FFFFFF" oninput="syncColor(this,'cfgH-${id}')"><span id="cfgH-${id}">#FFFFFF</span></div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace">720s=12min · 480s=8min · 900s=15min</div>
+  `;
+  document.getElementById('ctaList').appendChild(div);
+}
+
+function removeCTA(id) {
+  const el = document.getElementById('ctab-' + id);
+  if (el) el.remove();
+}
+
+function getCTAs() {
+  const blocks = document.getElementById('ctaList').querySelectorAll('.cta-block');
+  const result = [];
+  blocks.forEach(b => {
+    const id = b.id.replace('ctab-', '');
+    const text = document.getElementById('ct-' + id)?.value || '';
+    const url = document.getElementById('cu-' + id)?.value || '#';
+    const start = parseInt(document.getElementById('cs-' + id)?.value || 0);
+    const bg = document.getElementById('cbg-' + id)?.value || '#CC0000';
+    const fg = document.getElementById('cfg-' + id)?.value || '#FFFFFF';
+    if (text) result.push({ text, url, start, bg, fg });
+  });
+  return result;
+}
+
+function generate() {
+  if (!uploadedUrl) { showNotif('Faça o upload primeiro!', 'error'); return; }
+  setStep(3);
+
+  const hookImgUrl = document.getElementById('hookImgUrl').value.trim();
+  const hookHeightPct = parseInt(document.getElementById('hookHeightPct').value);
+  const videoHeightPct = 100 - hookHeightPct;
+  const hookText = document.getElementById('hookText').value.trim();
+  const hookTextColor = document.getElementById('hookTextColor').value;
+  const hookBgColor = document.getElementById('hookBgColor').value;
+  const hookFontSize = document.getElementById('hookFontSize').value;
+  const autoplay = document.getElementById('autoplay').value === '1';
+  const controls = document.getElementById('controls').value === '1';
+  const maxWidth = document.getElementById('maxWidth').value || 400;
+  const br = document.getElementById('borderRadius').value || 8;
+  const playerBg = document.getElementById('playerBg').value;
+  const pauseOnCta = document.getElementById('pauseOnCta').value === '1';
+  const ctas = getCTAs();
+  const ctasJson = JSON.stringify(ctas);
+
+  // Extrai videoId da URL HLS
+  const videoId = uploadedUrl.includes('playlist.m3u8') ? uploadedUrl.split('/')[3] : '';
+  const bunnyEmbed = videoId
+    ? `https://iframe.mediadelivery.net/embed/${BUNNY_LIBRARY_ID}/${videoId}?autoplay=${autoplay ? 'true' : 'false'}&loop=false&muted=${autoplay ? 'true' : 'false'}&preload=true`
+    : uploadedUrl;
+
+  const hookImgHtml = hookImgUrl
+    ? `<div style="width:100%;overflow:hidden;border-radius:${br}px ${br}px 0 0;flex-shrink:0;position:relative">
+    <img src="${hookImgUrl}" style="width:100%;display:block;object-fit:cover">${hookText ? `
+    <div style="position:absolute;bottom:0;left:0;right:0;background:${hookBgColor};color:${hookTextColor};text-align:center;padding:8px 12px;font-size:${hookFontSize}px;font-weight:700;font-family:sans-serif">${hookText}</div>` : ''}
+  </div>`
+    : hookText ? `<div style="width:100%;background:${hookBgColor};color:${hookTextColor};text-align:center;padding:10px 16px;font-size:${hookFontSize}px;font-weight:700;font-family:sans-serif;border-radius:${br}px ${br}px 0 0">${hookText}</div>` : '';
+
+  const ctaHtml = ctas.length > 0 ? `
+<div id="vsl-ctas" style="width:100%;max-width:${maxWidth}px;margin:0 auto;display:flex;flex-direction:column;gap:8px;padding:8px 0">
+${ctas.map(c => `  <a href="${c.url}" target="_blank" id="cta-${c.start}" style="display:none;width:100%;text-align:center;padding:14px 20px;background:${c.bg};color:${c.fg};font-size:16px;font-weight:700;border-radius:8px;text-decoration:none;box-sizing:border-box">${c.text}</a>`).join('\n')}
+</div>
+<script>
+(function(){
+  var ctas=${ctasJson};
+  var iframe=document.querySelector('#vsl-iframe');
+  if(!iframe) return;
+  setInterval(function(){
+    ctas.forEach(function(c){
+      var el=document.getElementById('cta-'+c.start);
+      if(!el) return;
+    });
+  }, 1000);
+  ${ctas.map(c => `setTimeout(function(){var el=document.getElementById('cta-${c.start}');if(el)el.style.display='block';},${c.start*1000});`).join('\n  ')}
+})();
+<\/script>` : '';
+
+  const htmlCode = `<!-- VSL Player — VSL Studio + Bunny CDN -->
+<div style="width:100%;max-width:${maxWidth}px;margin:0 auto">
+  ${hookImgHtml}
+  <div style="position:relative;width:100%;background:${playerBg};border-radius:${hookImgUrl || hookText ? `0 0 ${br}px ${br}px` : `${br}px`};overflow:hidden">
+    <iframe id="vsl-iframe" src="${bunnyEmbed}" style="width:100%;aspect-ratio:9/16;border:none;display:block" allow="autoplay;fullscreen" allowfullscreen></iframe>
+  </div>${ctaHtml}
+</div>`;
+
+  const reactCode = `import { useEffect, useRef } from "react";
+
+const ctas = ${ctasJson};
+
+export default function VSLPlayer() {
+  const videoRef = useRef(null);
+  const ctaAreaRef = useRef(null);
+  const shown = useRef({});
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const handler = () => {
+      const t = v.currentTime;
+      ctas.forEach((c, i) => {
+        if (t >= c.start && !shown.current[i]) {
+          shown.current[i] = true;
+          const a = document.createElement("a");
+          a.href = c.url; a.target = "_blank"; a.innerText = c.text;
+          a.style.cssText = \`display:block;width:100%;text-align:center;padding:14px 20px;background:\${c.bg};color:\${c.fg};font-size:16px;font-weight:700;border-radius:8px;text-decoration:none\`;
+          ${pauseOnCta ? 'a.onclick = () => v.pause();' : ''}
+          ctaAreaRef.current?.appendChild(a);
+        }
+      });
+    };
+    v.addEventListener("timeupdate", handler);
+    return () => v.removeEventListener("timeupdate", handler);
+  }, []);
+
+  return (
+    <div style={{ maxWidth: "${maxWidth}px", margin: "0 auto" }}>
+      ${hookText ? `<div style={{ background: "${hookBgColor}", color: "${hookTextColor}", textAlign: "center", padding: "10px 16px", fontSize: "${hookFontSize}px", fontWeight: 700, borderRadius: "${br}px ${br}px 0 0" }}>${hookText}</div>` : ''}
+      <div style={{ position: "relative", background: "${playerBg}", borderRadius: "${hookText ? `0 0 ${br}px ${br}px` : `${br}px`}", overflow: "hidden" }}>
+        <video ref={videoRef} src="${uploadedUrl}" style={{ width: "100%", display: "block" }} ${autoplay ? 'autoPlay muted playsInline' : 'playsInline'} ${controls ? 'controls' : ''} />
+        <div ref={ctaAreaRef} style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", width: "90%", display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }} />
+      </div>
+    </div>
+  );
+}`;
+
+  document.getElementById('outHtml').textContent = htmlCode;
+  document.getElementById('outReact').textContent = reactCode;
+  window._codes = { html: htmlCode, react: reactCode };
+  document.getElementById('outputSection').classList.add('visible');
+  showNotif('✅ Código gerado! Pronto para colar no Lovable.', 'success');
+  document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+function switchTab(tab, el) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.output-box').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(tab === 'html' ? 'outHtml' : 'outReact').classList.add('active');
+}
+
+function copyActive() {
+  if (!window._codes) return;
+  const code = activeTab === 'html' ? window._codes.html : window._codes.react;
+  navigator.clipboard.writeText(code).then(() => {
+    showNotif('✅ Copiado!', 'success');
+  });
+}
+
+function showNotif(msg, type) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.className = 'notif ' + type;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3500);
+}
+
+// Init
+addCTA();
+</script>
+
+<script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+</body>
+</html>
