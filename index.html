@@ -248,23 +248,21 @@ select option { background: var(--surface2); }
         <div class="card-title">Upload do vídeo</div>
       </div>
       <div class="card-body">
-        <div style="position:relative">
-          <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('videoFileInput').click()">
-            <div class="upload-btn-icon">🎬</div>
-            <div class="upload-btn-label">
-              <strong>Clique para selecionar seu vídeo</strong>
-              Qualquer tamanho · Bunny.net CDN
-            </div>
-          </button>
-          <input type="file" id="videoFileInput" accept="video/mp4,video/*" style="display:none" onchange="uploadToBunny(this.files[0])">
-        </div>
-        <div class="progress-wrap" id="progressWrap" style="display:none;margin-top:1rem">
-          <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:.5rem">
-            <div id="progressFill" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width .3s"></div>
+        <div class="field">
+          <label>Video ID do Bunny.net</label>
+          <input type="text" id="bunnyVideoId" placeholder="Ex: e36a97cb-d3e8-4471-8dbf-53238ce29099" oninput="onVideoIdInput(this.value)">
+          <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:6px">
+            Suba o vídeo em dash.bunny.net → Fluxo → videos-vsl → copie o ID aqui
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;font-family:'Space Mono',monospace;color:var(--muted)">
-            <span id="progressLabel">Enviando...</span>
-            <span id="progressPct">0%</span>
+        </div>
+        <div class="video-result" id="videoResult" style="display:none">
+          <div style="border-radius:8px;overflow:hidden;background:#000;aspect-ratio:9/16;max-height:300px">
+            <iframe id="previewVid" style="width:100%;height:100%;border:none" allowfullscreen></iframe>
+          </div>
+          <div class="video-meta">
+            <div class="video-meta-row"><span>Video ID</span><span class="video-meta-val" id="metaName">—</span></div>
+            <div class="video-meta-row"><span>Library</span><span class="video-meta-val" id="metaUrl">642514</span></div>
+            <div class="video-meta-row"><span>CDN</span><span class="video-meta-val" id="metaFormat">Bunny.net</span></div>
           </div>
         </div>
         <div class="video-result" id="videoResult">
@@ -462,7 +460,23 @@ let ctaCount = 0;
 let activeTab = 'html';
 let widget;
 
-async function uploadToBunny(file) {
+function onVideoIdInput(videoId) {
+  videoId = videoId.trim();
+  if (!videoId) return;
+  uploadedUrl = `https://${BUNNY_CDN_HOST}/${videoId}/playlist.m3u8`;
+  document.getElementById('previewVid').src = `https://iframe.mediadelivery.net/embed/${BUNNY_LIBRARY_ID}/${videoId}?autoplay=false`;
+  document.getElementById('metaName').textContent = videoId;
+  document.getElementById('videoResult').style.display = 'block';
+  document.getElementById('generateBtn').disabled = false;
+  document.getElementById('generateHint').style.display = 'none';
+  const st = document.getElementById('statusTag');
+  st.className = 'status-tag ok';
+  st.textContent = '● vídeo pronto';
+  setStep(2);
+  showNotif('✅ Video ID carregado!', 'success');
+}
+
+async function uploadToBunny(file) {}
   if (!file) return;
   document.getElementById('progressWrap').style.display = 'block';
   document.getElementById('videoResult').style.display = 'none';
