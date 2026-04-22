@@ -468,52 +468,39 @@ async function uploadToBunny(file) {
   document.getElementById('videoResult').style.display = 'none';
   document.getElementById('progressFill').style.width = '0%';
   document.getElementById('progressPct').textContent = '0%';
-  document.getElementById('progressLabel').textContent = 'Iniciando upload TUS...';
+  document.getElementById('progressLabel').textContent = 'Criando vídeo...';
 
   try {
-    const expirationTime = Math.floor(Date.now() / 1000) + 7200;
-
-    // 1. Criar upload TUS direto no Bunny (suporta CORS nativamente)
-    const tusRes = await fetch('https://video.bunnycdn.com/tusupload', {
+    // 1. Criar vídeo via Netlify Function (backend)
+    const createRes = await fetch('/.netlify/functions/bunny-create', {
       method: 'POST',
-      headers: {
-        'AuthorizationSignature': BUNNY_API_KEY,
-        'AuthorizationExpire': String(expirationTime),
-        'VideoLibraryId': String(BUNNY_LIBRARY_ID),
-        'Tus-Resumable': '1.0.0',
-        'Upload-Length': String(file.size),
-        'Upload-Metadata': `filetype ${btoa(file.type)},title ${btoa(encodeURIComponent(file.name))}`
-      }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: file.name })
     });
+    const createData = await createRes.json();
+    const videoId = createData.guid;
+    if (!videoId) throw new Error('Falha ao criar vídeo');
 
-    if (!tusRes.ok) throw new Error('Erro TUS POST: ' + tusRes.status);
-    const location = tusRes.headers.get('Location');
-    if (!location) throw new Error('Location header não retornado');
-
-    const videoId = location.split('/').pop();
     document.getElementById('progressLabel').textContent = 'Enviando para Bunny CDN...';
 
-    // 2. Enviar arquivo em chunks PATCH
-    const chunkSize = 5 * 1024 * 1024;
-    let offset = 0;
-    while (offset < file.size) {
-      const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
-      const patchRes = await fetch(location, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/offset+octet-stream',
-          'Upload-Offset': String(offset),
-          'Tus-Resumable': '1.0.0'
-        },
-        body: chunk
-      });
-      if (!patchRes.ok) throw new Error('Erro PATCH: ' + patchRes.status);
-      offset += chunk.size;
-      const pct = Math.min(Math.round((offset / file.size) * 100), 100);
-      document.getElementById('progressFill').style.width = pct + '%';
-      document.getElementById('progressPct').textContent = pct + '%';
-      document.getElementById('progressLabel').textContent = 'Enviando ' + pct + '%...';
-    }
+    // 2. Upload direto via XHR com progresso
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', `https://video.bunnycdn.com/library/${BUNNY_LIBRARY_ID}/videos/${videoId}`);
+      xhr.setRequestHeader('AccessKey', BUNNY_API_KEY);
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          document.getElementById('progressFill').style.width = pct + '%';
+          document.getElementById('progressPct').textContent = pct + '%';
+          document.getElementById('progressLabel').textContent = 'Enviando ' + pct + '%...';
+        }
+      };
+      xhr.onload = () => xhr.status === 200 ? resolve() : reject(new Error('Erro upload: ' + xhr.status));
+      xhr.onerror = () => reject(new Error('Erro de rede'));
+      xhr.send(file);
+    });
 
     uploadedUrl = `https://${BUNNY_CDN_HOST}/${videoId}/playlist.m3u8`;
     document.getElementById('previewVid').src = `https://${BUNNY_CDN_HOST}/${videoId}/play_720p.mp4`;
@@ -528,6 +515,13 @@ async function uploadToBunny(file) {
     st.className = 'status-tag ok';
     st.textContent = '● vídeo hospedado';
     setStep(2);
+    showNotif('✅ Upload concluído! Bunny CDN ativo.', 'success');
+
+  } catch(err) {
+    document.getElementById('progressWrap').style.display = 'none';
+    showNotif('❌ ' + err.message, 'error');
+  }
+}
     showNotif('✅ Upload concluído! Bunny CDN ativo.', 'success');
 
   } catch(err) {
